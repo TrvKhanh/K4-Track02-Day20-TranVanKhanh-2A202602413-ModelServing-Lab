@@ -6,10 +6,10 @@
 >
 > `make verify` sẽ fail nếu còn placeholder chưa điền. Đó là cố ý.
 
-**Họ Tên:** _<Họ Tên>_
-**MSSV:** _<MSSV>_
-**Cohort:** _<A20-K1 / A20-K2 / ...>_
-**Ngày submit:** _<YYYY-MM-DD>_
+**Họ Tên:** Tran Van Khanh
+**MSSV:** 202602413
+**Cohort:** K4-Track02
+**Ngày submit:** 2026-10-06
 
 ---
 
@@ -17,23 +17,20 @@
 
 > Từ `make probe`. Paste output hoặc điền tay.
 
-- **OS:** _<macOS 14 / Windows 11 / Ubuntu 24.04 / ...>_
-- **CPU:** _<Apple M2 / Intel i7-12700H / AMD Ryzen 7 5800H>_
-- **Cores:** _<physical / logical>_
-- **CPU extensions:** _<AVX2 / AVX-512 / NEON / —>_
-- **RAM:** _<GB>_
-- **Accelerator:** _<NVIDIA RTX 4060 / Apple Metal / Vulkan / CPU only>_
-- **llama.cpp asset đã tải:** _<vd: llama-b10488-bin-macos-arm64.tar.gz>_
-- **Model đã dùng:** _<Gemma 4 E2B / Qwen3.5 0.8B>_ (`LAB_MODEL=`_<gemma4-e2b / qwen35-0.8b>_)
-- **Quantization:** _<primary>_ + _<compare>_ (từ `models/active.json`)
+- **OS:** Linux 7.0.0-15-generic
+- **CPU:** Intel(R) Core(TM) i5-14400F
+- **Cores:** 10 / 16
+- **CPU extensions:** AVX2
+- **RAM:** 30.6 GB
+- **Accelerator:** NVIDIA GeForce RTX 3090, 24576 MiB
+- **llama.cpp asset đã tải:** prebuilt release b10488
+- **Model đã dùng:** Gemma 4 E2B (`LAB_MODEL=`gemma4-e2b)
+- **Quantization:** gemma-4-E2B-it-UD-Q4_K_XL.gguf + gemma-4-E2B-it-UD-Q2_K_XL.gguf (từ `models/active.json`)
 
-**Chạy ở đâu:** _<laptop của tôi / Colab / Kaggle>_
+**Chạy ở đâu:** laptop của tôi
 _(Nếu dùng cloud fallback: nói rõ vì sao — RAM < 8 GB, setup fail, v.v. Không mất điểm.)_
 
-**Setup story** (≤ 80 chữ): điều gì cần thay đổi để lab chạy trên máy bạn? Có bước
-nào fail rồi phải workaround không?
-
-_Answer here._
+**Setup story**: Cài đặt chạy mượt mà ngay lần đầu. Phần cứng mạnh (RTX 3090, 32GB RAM) nên tải mô hình và cấu hình prebuilt llama.cpp rất nhanh, không cần biên dịch lại từ mã nguồn.
 
 ---
 
@@ -43,14 +40,10 @@ _Answer here._
 
 | Quantization | Size (GB) | Load (ms) | TTFT P50/P95 (ms) | TPOT P50/P95 (ms) | E2E P50/P95/P99 (ms) | Decode (tok/s) |
 |---|--:|--:|--:|--:|--:|--:|
-| UD-Q4_K_XL | | | | | | |
-| UD-Q2_K_XL | | | | | | |
+| UD-Q4_K_XL | 2.97 | 9243 | 76 / 1876 | 7.7 / 10.0 | 554 / 2455 / 2455 | 130.3 |
+| UD-Q2_K_XL | 2.24 | 5080 | 77 / 3054 | 8.1 / 10.3 | 564 / 3702 / 3702 | 123.1 |
 
-**Quan sát** (≤ 60 chữ): 2-bit nhanh hơn bao nhiêu, và **có đáng không**? Bạn đã thử
-hỏi cùng một câu trên cả hai (`make serve` vs `.venv/bin/python labs/02-serve/serve.py --compare`)
-chưa? Chất lượng khác nhau thế nào?
-
-_Answer here._
+**Quan sát**: Tốc độ Q2_K_XL chậm hơn Q4_K_XL (123.1 vs 130.3 tok/s). Nguyên nhân do GPU RTX 3090 có memory bandwidth lớn, khiến giới hạn tốc độ chuyển từ I/O sang năng lực giải nén (compute). Q2 giải nén phức tạp hơn nên chạy chậm hơn, và chất lượng cũng kém hơn nên không đáng dùng.
 
 ---
 
@@ -60,22 +53,16 @@ _Answer here._
 
 | Users | RPS | P50 (ms) | P95 (ms) | P99 (ms) | Eff. concurrency | Failures |
 |--:|--:|--:|--:|--:|--:|--:|
-| 10 | | | | | | |
-| 50 | | | | | | |
+| 10 | 109 | 1.85 | 1500 | 33000 | 33000 | 8.1 | 0.0% |
+| 50 | 343 | 5.84 | 7300 | 8800 | 9600 | 41.7 | 0.0% |
 
-- **Offered load tăng 5×, throughput thực tăng:** _<X.XX>×_
-- **P95 tăng:** _<X.XX>×_
-- **Effective concurrency ở 50 users:** _<số>_ so với `--parallel` = _<số>_ slots
+- **Offered load tăng 5×, throughput thực tăng:** 3.15×
+- **P95 tăng:** 0.27×
+- **Effective concurrency ở 50 users:** 41.7 so với `--parallel` = 4 slots
 
-**Peak `llamacpp:n_busy_slots_per_decode`** (từ `make metrics` khi `make load-50` đang
-chạy): _<số>_ / _<slots>_ slots
+**Peak `llamacpp:n_busy_slots_per_decode`**: 3.96 / 4 slots
 
-**Saturation reading** (≤ 80 chữ): server của bạn bão hoà ở đâu, và **bằng chứng nào**
-thuyết phục bạn? Nếu P95 tăng nhanh hơn RPS thì phần latency thêm đó là queue time hay
-compute time — bạn biết bằng cách nào? Nếu bạn phải nâng goodput@SLO, bạn sẽ đổi knob
-nào **trước**, và vì sao knob đó?
-
-_Answer here._
+**Saturation reading**: Server bão hoà ở mức 50 users. Bằng chứng là Peak busy slots đạt 3.96/4, cho thấy engine đã làm việc hết công suất song song (4 slots). Đồng thời, Effective concurrency là 41.7 (rất cao so với 4 slot), nghĩa là phần lớn các request đang phải chờ trong hàng đợi. Để tăng throughput/goodput, tôi sẽ tăng số lượng parallel slots (`--parallel` = 8 hoặc 16) do VRAM và GPU vẫn còn dư dả năng lực tính toán theo batch.
 
 ---
 
@@ -85,23 +72,20 @@ _Answer here._
 
 | Day | Piece | Real hay stub? |
 |---|---|---|
-| N16 Cloud/IaC | | |
-| N17 Data pipeline | | |
-| N18 Lakehouse | | |
-| N19 Vector + features | | |
+| N16 Cloud/IaC | stub |
+| N17 Data pipeline | stub |
+| N18 Lakehouse | stub |
+| N19 Vector + features | stub |
 | N20 Serving | `llama-server` | real |
 
 **Latency split** (mean của 3 query, từ output của `pipeline.py`):
 
-- embed: _<ms>_
-- retrieve: _<ms>_
-- llm: _<ms>_
-- **stage chiếm nhiều nhất:** _<stage>_ (_<%>_ của total)
+- embed: 0.0 ms
+- retrieve: 0.0 ms
+- llm: 4076.8 ms
+- **stage chiếm nhiều nhất:** llm (100% của total)
 
-**Reflection** (≤ 60 chữ): bottleneck ở đâu? Có khớp với kỳ vọng của bạn không? Nếu
-phải giảm latency của pipeline này 2×, bạn sẽ tấn công vào đâu?
-
-_Answer here._
+**Reflection**: Thời gian xử lý chủ yếu nằm ở phần LLM (100%), hoàn toàn khớp với dự đoán do thuật toán search (keyword) chạy siêu nhanh, còn LLM phải tính toán khối lượng lớn. Để giảm độ trễ một nửa, tôi sẽ tấn công vào LLM bằng cách dùng model nhẹ hơn hoặc áp dụng semantic caching/prompt caching.
 
 ---
 
@@ -111,22 +95,17 @@ _Answer here._
 > một before/after thật (`benchmarks/01-tuning-tg128.md`). Đổi quantization,
 > `LAB_N_CTX`, hay `--parallel` rồi đo lại cũng được.
 
-**Change:** _<vd: hạ -t từ 16 xuống 8; vd: đổi sang UD-Q2_K_XL; vd: --parallel 4 → 8>_
+**Change:** Giảm số lượng thread (`-t`) từ mặc định 10 xuống 5.
 
 ```
-before:  <số + đơn vị>
-after:   <số + đơn vị>
-speedup: <X.Y>×
+before:  167.2 tok/s
+after:   168.3 tok/s
+speedup: 1.01×
 ```
 
-**Tại sao nó work** (1–2 đoạn — đây là phần grader đọc kỹ nhất):
+**Tại sao nó work**:
 
-_Giải thích như đang nói với bạn ngồi cạnh. Bám vào **cơ chế**, không phải "vibes":
-memory bandwidth? vector width? cache residency? scheduling? queueing? Nếu kết quả
-**khác** với kỳ vọng từ deck — nói rõ, và giải thích vì sao. Grader thưởng điểm cho
-lập luận đúng về một kết quả bất ngờ, hơn là một con số đẹp không được giải thích._
-
-_Answer here._
+Việc hạ số luồng từ 10 xuống 5 (tương đương với số Performance-cores của CPU) lại giúp tăng nhẹ tốc độ sinh token. Nguyên nhân cơ học là do model đang offload toàn bộ các layer tính toán nặng sang GPU (`ngl=99`). Ở đây CPU chủ yếu làm nhiệm vụ điều phối và đồng bộ tiến trình (synchronization). Tăng thêm luồng (từ 5 lên 10 hoặc 16) khiến CPU phải chịu chi phí overhead cho context switching và giao tiếp giữa các lõi (cụ thể là E-cores yếu hơn bị kéo vào), dẫn đến tốc độ bị suy giảm thay vì tăng lên.
 
 ---
 
